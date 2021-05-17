@@ -1,8 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>ASP.NET_CORE_3_Chapter_15</RootNamespace>
+    <UserSecretsId>da239bc8-f6fa-424b-a6aa-66b7d986b3d4</UserSecretsId>
   </PropertyGroup>
-
 </Project>
