@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.FileProviders;
 
 namespace ASP.NET_CORE_3_Chapter_15
 {
@@ -34,6 +35,15 @@ namespace ASP.NET_CORE_3_Chapter_15
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseStaticFiles();
+
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new
+                    PhysicalFileProvider($"{env.ContentRootPath}/staticfiles"),
+                RequestPath = "/files"
+            });
+
             app.UseRouting();
 
             app.UseMiddleware<LocationMiddleware>();
