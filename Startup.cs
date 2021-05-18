@@ -6,69 +6,61 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.FileProviders;
 
 namespace ASP.NET_CORE_3_Chapter_15
 {
     public class Startup
     {
-        public Startup(IConfiguration configService)
-        {
-            Configuration = configService;
-        }
-
-        private IConfiguration Configuration { get; set; }
-
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<MessageOptions>(Configuration.GetSection("Location"));
+            services.Configure<CookiePolicyOptions>(opts =>
+            {
+                opts.CheckConsentNeeded = context => true;
+            });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,
-                ILogger<Startup> logger)
+        public void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            app.UseStaticFiles();
-
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new
-                    PhysicalFileProvider($"{env.ContentRootPath}/staticfiles"),
-                RequestPath = "/files"
-            });
-
+            app.UseDeveloperExceptionPage();
+            app.UseCookiePolicy();
+            app.UseMiddleware<ConsentMiddleware>();
             app.UseRouting();
 
-            app.UseMiddleware<LocationMiddleware>();
-
-            app.UseEndpoints(endpoints => {
-                endpoints.MapGet("/", async context => {
-                    logger.LogDebug("Response for / started");
-                    await context.Response.WriteAsync("Hello World!");
-                    logger.LogDebug("Response for / completed");
-                });
-
-                endpoints.MapGet("config", async context =>
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/cookie", async context =>
                 {
-                    string defaultDebug = Configuration["Logging:LogLevel:Default"];
+                    int counter1 =
+                        int.Parse(context.Request.Cookies["counter1"] ?? "0") + 1;
+                    context.Response.Cookies.Append("counter1", counter1.ToString(),
+                        new CookieOptions
+                        {
+                            MaxAge = TimeSpan.FromMinutes(30),
+                            IsEssential = true
+                        });
+                    int counter2 =
+                        int.Parse(context.Request.Cookies["counter2"] ?? "0") + 1;
+                    context.Response.Cookies.Append("counter2", counter2.ToString(),
+                        new CookieOptions
+                        {
+                            MaxAge = TimeSpan.FromMinutes(30)
+                        });
                     await context.Response
-                        .WriteAsync($"The config setting is: {defaultDebug}");
-                    string environ = Configuration["ASPNETCORE_ENVIRONMENT"];
-                    await context.Response
-                        .WriteAsync($"\nThe env setting is: {environ}");
-                    string wsID = Configuration["WebService:Id"];
-                    string wsKey = Configuration["WebService:Key"];
-                    await context.Response.WriteAsync($"\nThe secret ID is: {wsID}");
-                    await context.Response.WriteAsync($"\nThe secret Key is: {wsKey}");
+                        .WriteAsync($"Counter1: {counter1}, Counter2: {counter2}");
                 });
+
+                endpoints.MapGet("clear", context =>
+                {
+                    context.Response.Cookies.Delete("counter1");
+                    context.Response.Cookies.Delete("counter2");
+                    context.Response.Redirect("/");
+                    return Task.CompletedTask;
+                });
+
+                endpoints.MapFallback(async context =>
+                    await context.Response.WriteAsync("Hello World!"));
             });
         }
+
     }
 }
