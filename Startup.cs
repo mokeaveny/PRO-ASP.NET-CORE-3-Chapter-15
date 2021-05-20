@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using ASP.NET_CORE_3_Chapter_15.Services;
+using Microsoft.EntityFrameworkCore;
+using ASP.NET_CORE_3_Chapter_15.Models;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ASP.NET_CORE_3_Chapter_15
 {
@@ -26,9 +30,16 @@ namespace ASP.NET_CORE_3_Chapter_15
             });
             services.AddResponseCaching();
             services.AddSingleton<IResponseFormatter, HtmlResponseFormatter>();
+
+            services.AddDbContext<CalculationContext>(opts =>
+            {
+                opts.UseSqlServer(Configuration["ConnectionStrings:CalcConnection"]);
+            });
+            services.AddTransient<SeedData>();
         }
 
-        public void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime, IWebHostEnvironment env,
+            SeedData seedData)
         {
             app.UseDeveloperExceptionPage();
             app.UseResponseCaching();
@@ -43,6 +54,16 @@ namespace ASP.NET_CORE_3_Chapter_15
                     await context.Response.WriteAsync("Hello World!");
                 });
             });
+
+            bool cmdLineInit = (Configuration["INITDB"] ?? "false") == "true";
+            if (env.IsDevelopment() || cmdLineInit)
+            {
+                seedData.SeedDatabase();
+                if (cmdLineInit)
+                {
+                    lifetime.StopApplication();
+                }
+            }
         }
     }
 }
